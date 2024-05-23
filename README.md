@@ -1,2 +1,3 @@
 # kvstore
-An in-memory key value store
+
+An in-memory key value store.
