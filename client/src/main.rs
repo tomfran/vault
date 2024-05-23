@@ -7,7 +7,7 @@ fn main() {
             println!("Successfully connected to server at 127.0.0.1:6379");
 
             // Sending a message to the server
-            let msg = b"Hello from client!";
+            let msg = b"PING";
             stream.write_all(msg).expect("Failed to write to server");
             println!("Sent message: {:?}", msg);
 

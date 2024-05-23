@@ -1,5 +1,13 @@
 use std::io::{Read, Write};
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
+
+const BUFFER_SIZE: usize = 512;
+
+enum Command {
+    Ping,
+    Set(String, String),
+    Get(String),
+}
 
 fn main() {
     println!("SERVER STARTED!");
@@ -8,33 +16,60 @@ fn main() {
 
     for stream in listener.incoming() {
         match stream {
-            Ok(mut stream) => {
-                println!("Accepted new connection");
-
-                // Buffer to hold the client message
-                let mut buffer = [0; 512];
-
-                // Read the message from the client
-                match stream.read(&mut buffer) {
-                    Ok(size) => {
-                        if size > 0 {
-                            let received_message = String::from_utf8_lossy(&buffer[..size]);
-                            println!("Received message: {}", received_message);
-
-                            // Optionally, send a response back to the client
-                            let response = b"Message received";
-                            stream.write_all(response).unwrap();
-                            println!("Sent response to client");
-                        }
-                    }
-                    Err(e) => {
-                        println!("Failed to read from connection: {}", e);
-                    }
+            Ok(mut s) => {
+                if let Some(cmd) = read_command(&mut s) {
+                    handle_command(&mut s, &cmd);
                 }
             }
-            Err(e) => {
-                println!("Error: {}", e);
+            Err(_) => println!("Error on stream listen"),
+        }
+    }
+}
+
+fn read_command(stream: &mut TcpStream) -> Option<Command> {
+    let mut buffer = [0; BUFFER_SIZE];
+
+    match stream.read(&mut buffer) {
+        Ok(n) => {
+            if n == 0 {
+                return None;
             }
+
+            let input = String::from_utf8_lossy(&buffer[..n]);
+            let trimmed_input = input.trim();
+
+            string_to_cmd(trimmed_input)
+        }
+        Err(_) => {
+            println!("Error while parsing command");
+            None
+        }
+    }
+}
+
+fn string_to_cmd(s: &str) -> Option<Command> {
+    let parts: Vec<&str> = s.split_whitespace().collect();
+    match parts.as_slice() {
+        ["PING"] => Some(Command::Ping),
+        ["SET", key, value] => Some(Command::Set(key.to_string(), value.to_string())),
+        ["GET", key] => Some(Command::Get(key.to_string())),
+        _ => {
+            println!("Command not handled '{}'", s);
+            None
+        }
+    }
+}
+
+fn handle_command(stream: &mut TcpStream, cmd: &Command) {
+    match cmd {
+        Command::Ping => {
+            println!("Handling PING");
+            if stream.write_all(b"PONG").is_err() {
+                println!("Error while responding to PING");
+            };
+        }
+        _ => {
+            println!("CMD not handled");
         }
     }
 }
