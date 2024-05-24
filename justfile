@@ -9,18 +9,3 @@ rserver:
 
 rclient:
     clear && cargo run --release --bin client
-
-clean: 
-    cargo clean
-
-test: 
-    cargo test
-
-rtest: 
-    cargo test --release
-
-build:
-    cargo build
-
-rbuild: 
-    cargo build --release

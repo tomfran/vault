@@ -1,75 +1,62 @@
-use std::io::{Read, Write};
-use std::net::{TcpListener, TcpStream};
+mod protocol;
 
-const BUFFER_SIZE: usize = 512;
+use log::{debug, error, info, LevelFilter};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::{TcpListener, TcpStream},
+};
 
-enum Command {
-    Ping,
-    Set(String, String),
-    Get(String),
-}
+const BUFFER_SIZE: usize = 4096;
 
-fn main() {
-    println!("SERVER STARTED!");
+#[tokio::main]
+async fn main() {
+    env_logger::Builder::new()
+        .filter_level(LevelFilter::Debug)
+        .init();
 
-    let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    info!("Server started!");
 
-    for stream in listener.incoming() {
-        match stream {
-            Ok(mut s) => {
-                if let Some(cmd) = read_command(&mut s) {
-                    handle_command(&mut s, &cmd);
-                }
-            }
-            Err(_) => println!("Error on stream listen"),
-        }
+    let listener = TcpListener::bind("127.0.0.1:6379").await.unwrap();
+
+    loop {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        tokio::spawn(async move {
+            handle_connection(&mut stream).await;
+        });
     }
 }
 
-fn read_command(stream: &mut TcpStream) -> Option<Command> {
+async fn handle_connection(stream: &mut TcpStream) {
+    debug!("Handling a new connection");
+
     let mut buffer = [0; BUFFER_SIZE];
 
-    match stream.read(&mut buffer) {
-        Ok(n) => {
-            if n == 0 {
-                return None;
+    loop {
+        match stream.read(&mut buffer).await {
+            Ok(n) => {
+                if n == 0 {
+                    debug!("Read 0 bytes from client stream, closing handler");
+                    break;
+                }
+
+                let res = String::from_utf8_lossy(&buffer[..n]);
+
+                debug!("Red client msg: {}", res.trim());
+
+                match stream.write_all(&buffer[0..n]).await {
+                    Ok(_) => {
+                        debug!("Sent response");
+                    }
+                    Err(e) => {
+                        error!("Error while responsing to client {}", e);
+                    }
+                };
             }
-
-            let input = String::from_utf8_lossy(&buffer[..n]);
-            let trimmed_input = input.trim();
-
-            string_to_cmd(trimmed_input)
-        }
-        Err(_) => {
-            println!("Error while parsing command");
-            None
+            Err(e) => {
+                error!("Error while reading client message {}", e);
+            }
         }
     }
-}
 
-fn string_to_cmd(s: &str) -> Option<Command> {
-    let parts: Vec<&str> = s.split_whitespace().collect();
-    match parts.as_slice() {
-        ["PING"] => Some(Command::Ping),
-        ["SET", key, value] => Some(Command::Set(key.to_string(), value.to_string())),
-        ["GET", key] => Some(Command::Get(key.to_string())),
-        _ => {
-            println!("Command not handled '{}'", s);
-            None
-        }
-    }
-}
-
-fn handle_command(stream: &mut TcpStream, cmd: &Command) {
-    match cmd {
-        Command::Ping => {
-            println!("Handling PING");
-            if stream.write_all(b"PONG").is_err() {
-                println!("Error while responding to PING");
-            };
-        }
-        _ => {
-            println!("CMD not handled");
-        }
-    }
+    debug!("Closing handler");
 }
