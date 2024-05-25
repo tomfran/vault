@@ -1,6 +1,6 @@
 #[derive(PartialEq, Debug)]
 pub enum Command {
     Ping,
-    Set(String, String),
-    Get(String),
+    Set(Box<[u8]>, Box<[u8]>),
+    Get(Box<[u8]>),
 }

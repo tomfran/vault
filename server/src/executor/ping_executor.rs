@@ -1,13 +1,14 @@
+use super::Executor;
 use derive_builder::Builder;
 use log::debug;
-
-use super::Executor;
 
 #[derive(Builder)]
 pub struct PingExecutor {}
 
 impl Executor for PingExecutor {
-    fn execute(&self) {
-        debug!("Ping executor");
+    fn execute(&self) -> Box<[u8]> {
+        debug!("Executing PING");
+
+        "PONG".as_bytes().into()
     }
 }

@@ -1,4 +1,5 @@
-use crate::{executor::get_command_executor, protocol::parser::parse_command};
+use crate::{executor::get_command_executor, protocol::parser::parse_command, storage::Storage};
+use std::sync::{Arc, Mutex};
 
 pub struct Handler {}
 
@@ -7,9 +8,9 @@ impl Handler {
         Handler {}
     }
 
-    pub fn handle(&self, command: &[u8]) {
-        if let Some(e) = parse_command(command).map(get_command_executor) {
-            e.execute();
-        }
+    pub fn handle(&self, command: &[u8], storage: Arc<Mutex<Storage>>) -> Option<Box<[u8]>> {
+        parse_command(command)
+            .map(|c| get_command_executor(c, storage))
+            .map(|e| e.execute())
     }
 }
