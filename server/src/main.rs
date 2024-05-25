@@ -1,3 +1,5 @@
+mod executor;
+mod handler;
 mod protocol;
 
 use log::{debug, error, info, LevelFilter};
@@ -39,9 +41,9 @@ async fn handle_connection(stream: &mut TcpStream) {
                     break;
                 }
 
-                let res = String::from_utf8_lossy(&buffer[..n]);
+                let handler = handler::Handler::new();
 
-                debug!("Red client msg: {}", res.trim());
+                handler.handle(&buffer[..n]);
 
                 match stream.write_all(&buffer[0..n]).await {
                     Ok(_) => {

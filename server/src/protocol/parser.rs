@@ -1,19 +1,6 @@
-// Protocol definition:
-//
-// Common Header = | 1b version | 1b instruction |
-//
-// Ping ->  Header
-// Get  ->  Header | 4 bytes string len | String 1 |
-// Set  ->  Header | 4 bytes string len | String 1 | 4 bytes string len | String 2 |
-
 use log::{debug, warn};
 
-#[derive(PartialEq, Debug)]
-pub enum Command {
-    Ping,
-    Set(String, String),
-    Get(String),
-}
+use super::command::Command;
 
 pub fn parse_command(payload: &[u8]) -> Option<Command> {
     if payload.len() < 2 {
@@ -49,13 +36,6 @@ pub fn parse_command(payload: &[u8]) -> Option<Command> {
             None
         }
     }
-}
-
-pub fn string_to_variable_bytes(payload: String) -> Vec<u8> {
-    let string_bytes = payload.as_bytes();
-    let len_bytes = (string_bytes.len() as u32).to_be_bytes();
-
-    [string_bytes, &len_bytes].concat()
 }
 
 fn read_variable_bytes_string(payload: &[u8]) -> Option<(usize, String)> {
