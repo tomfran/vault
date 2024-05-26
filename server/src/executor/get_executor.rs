@@ -1,14 +1,11 @@
+use super::Executor;
 use crate::storage::Storage;
-use derive_builder::Builder;
 use log::debug;
 use std::sync::{Arc, Mutex};
 
-use super::Executor;
-
-#[derive(Builder)]
 pub struct GetExecutor {
-    key: Box<[u8]>,
     storage: Arc<Mutex<Storage>>,
+    key: Box<[u8]>,
 }
 
 impl Executor for GetExecutor {
@@ -20,5 +17,11 @@ impl Executor for GetExecutor {
             .unwrap()
             .get(&self.key)
             .map_or(Box::new([0]), |v| v.serialize())
+    }
+}
+
+impl GetExecutor {
+    pub fn new(storage: Arc<Mutex<Storage>>, key: Box<[u8]>) -> GetExecutor {
+        GetExecutor { storage, key }
     }
 }
